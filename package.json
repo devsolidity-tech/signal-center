@@ -1,0 +1,23 @@
+{
+	"type": "module",
+	"name": "signal-center",
+	"version": "1.0.0",
+	"description": "",
+	"main": "index.js",
+	"scripts": {
+		"start": "node src/index.js",
+		"dev": "nodemon src/index.js",
+		"test": "echo \"No tests yet\" && exit 0"
+	},
+	"keywords": [],
+	"author": "",
+	"license": "ISC",
+	"devDependencies": {
+		"nodemon": "^3.1.10"
+	},
+	"dependencies": {
+		"dotenv": "^16.5.0",
+		"express": "^5.1.0",
+		"firebase-admin": "^13.3.0"
+	}
+}
