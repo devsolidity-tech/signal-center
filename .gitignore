@@ -137,3 +137,5 @@ dist
 
 # Firebase service account
 signal-center-test-firebase-adminsdk-fbsvc-3b271fd786
+
+jsonResponse.json

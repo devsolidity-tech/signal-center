@@ -7,6 +7,7 @@ import {
 	updateOrderByOrderId,
 	closeOrderByOrderId,
 	getOrdersExcept,
+	getOrderByLatestTimestamp,
 } from "../controllers/ordersController.js";
 
 const router = Router();
@@ -17,6 +18,7 @@ router.get("/", (req, res) => {
 
 router.post("/orders", createOrder);
 router.get("/orders", getAllOrders);
+router.get("/orders/latestTimestamp/:latestTimestamp", getOrderByLatestTimestamp);
 router.get("/orders/:orderId", getOrderByOrderId);
 router.delete("/orders/:orderId", deleteOrderByOrderId);
 router.put("/orders/:orderId", updateOrderByOrderId);

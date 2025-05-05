@@ -1,10 +1,9 @@
 import OrderDTO from "../dto/OrderDTO.js";
 import { symbols, openOrderType, updateOrderType } from "../utils/constant.js";
-import { db, FieldValue } from "../database/firebase.js";
+import { toReadableDate } from "../utils/dateUtils.js";
+import { db, FieldValue, Timestamp } from "../database/firebase.js";
 import { generateEpochId } from "../utils/timestampId.js";
-
-const toReadableDate = (timestamp) =>
-	timestamp && typeof timestamp.toDate === "function" ? timestamp.toDate().toISOString() : null;
+import admin from "firebase-admin";
 
 export const createOrder = async (req, res) => {
 	try {
@@ -20,6 +19,12 @@ export const createOrder = async (req, res) => {
 
 		orderDto.orderId = generateEpochId();
 
+		const jakartaString = new Date().toLocaleString("en-US", {
+			timeZone: "Asia/Jakarta",
+		});
+		const jakartaDate = new Date(jakartaString);
+		const createdAtTs = Timestamp.fromDate(jakartaDate);
+
 		const docRef = await db.collection("orders").add({
 			orderId: orderDto.orderId,
 			symbol: orderDto.symbol,
@@ -28,7 +33,7 @@ export const createOrder = async (req, res) => {
 			stopLossPrice: orderDto.stopLossPrice,
 			takeProfitPrice: orderDto.takeProfitPrice,
 			orderSize: orderDto.orderSize,
-			createdAt: FieldValue.serverTimestamp(),
+			createdAt: createdAtTs,
 		});
 
 		const newOrderId = docRef.id;
@@ -42,7 +47,7 @@ export const createOrder = async (req, res) => {
 			stopLossPrice: orderDto.stopLossPrice,
 			takeProfitPrice: orderDto.takeProfitPrice,
 			orderSize: orderDto.orderSize,
-			createdAt: FieldValue.serverTimestamp(),
+			createdAt: createdAtTs,
 			transactionType: "ADD",
 		});
 
@@ -187,6 +192,7 @@ export const getAllOrders = async (req, res) => {
 		const snapshot = await query.get();
 		const orders = snapshot.docs.map((doc) => {
 			const data = doc.data();
+
 			return {
 				docId: doc.id,
 				orderId: data.orderId,
@@ -202,6 +208,57 @@ export const getAllOrders = async (req, res) => {
 		});
 		res.json({ success: true, data: orders });
 	} catch (error) {
+		res.status(500).json({ success: false, message: error.message });
+	}
+};
+
+export const getOrderByLatestTimestamp = async (req, res) => {
+	try {
+		const { latestTimestamp } = req.params;
+		const limit = parseInt(req.query.limit, 10) || null;
+
+		let query = db.collection("orders");
+
+		if (latestTimestamp !== undefined) {
+			const ms = parseInt(latestTimestamp, 10);
+			if (isNaN(ms)) {
+				return res.status(400).json({ success: false, message: "Invalid latestTimestamp" });
+			}
+
+			const ts = admin.firestore.Timestamp.fromMillis(ms);
+
+			query = query
+				.where("createdAt", ">", ts)
+				.orderBy("createdAt", "asc") // earliest after the given ts
+				.limit(1); // only one
+		} else {
+			query = query.orderBy("createdAt", "desc");
+			if (limit > 0) {
+				query = query.limit(limit);
+			}
+		}
+
+		const snapshot = await query.get();
+
+		const orders = snapshot.docs.map((doc) => {
+			const data = doc.data();
+			return {
+				docId: doc.id,
+				orderId: data.orderId,
+				symbol: data.symbol,
+				orderType: data.orderType,
+				openPrice: data.openPrice,
+				stopLossPrice: data.stopLossPrice,
+				takeProfitPrice: data.takeProfitPrice,
+				orderSize: data.orderSize,
+				createdAt: toReadableDate(data.createdAt),
+				updatedAt: toReadableDate(data.updatedAt),
+			};
+		});
+
+		res.json({ success: true, data: orders });
+	} catch (error) {
+		console.error("getAllOrders error:", error);
 		res.status(500).json({ success: false, message: error.message });
 	}
 };
