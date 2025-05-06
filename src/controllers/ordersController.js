@@ -121,12 +121,16 @@ export const closeOrderByOrderId = async (req, res) => {
 	try {
 		const { orderId } = req.params;
 
+		const epochSeconds = Math.floor(Date.now() / 1000);
+		const createdAt = convertEpochToGmt7(epochSeconds);
+
 		const snapshot = await db.collection("orders").where("orderId", "==", orderId).limit(1).get();
 		if (snapshot.empty) return res.status(404).json({ success: false, message: "Order not found" });
 		const docRef = snapshot.docs[0].ref;
 		await docRef.update({
 			orderType: "CLOSE",
-			updatedAt: FieldValue.serverTimestamp(),
+			epochSeconds,
+			updatedAt: createdAt,
 		});
 
 		const doc = snapshot.docs[0];
@@ -141,7 +145,8 @@ export const closeOrderByOrderId = async (req, res) => {
 			stopLossPrice: data.stopLossPrice,
 			takeProfitPrice: data.takeProfitPrice,
 			orderSize: data.orderSize,
-			createdAt: toReadableDate(data.createdAt),
+			createdAt,
+			epochSeconds,
 			transactionType: "UPDATE",
 		});
 
