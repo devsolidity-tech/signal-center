@@ -4,6 +4,7 @@ import { toReadableDate, convertEpochMilliToGmt7, convertEpochToGmt7 } from "../
 import { db, FieldValue, Timestamp } from "../database/firebase.js";
 import { generateEpochId } from "../utils/timestampId.js";
 import admin from "firebase-admin";
+import { isValidSubscriber } from "../services/subscriberService.js";
 
 export const createOrder = async (req, res) => {
 	try {
@@ -192,6 +193,15 @@ export const getAllOrders = async (req, res) => {
 		if (isNaN(after)) {
 			return res.status(400).json({ error: "Invalid 'after' timestamp" });
 		}
+		const accountNo = req.query.accountNo;
+		if (!accountNo) {
+			return res.status(400).json({ error: "Invalid account number" });
+		}
+
+		const isValid = await isValidSubscriber(accountNo);
+		if (!isValid) {
+			throw new Error("Invalid Account No");
+		}
 
 		const limit = parseInt(req.query.limit, 10) || null;
 		let query = db
@@ -217,7 +227,7 @@ export const getAllOrders = async (req, res) => {
 				takeProfitPrice: data.takeProfitPrice,
 				orderSize: data.orderSize,
 				createdAt: data.createdAt,
-				epochSeconds: data.epochSeconds
+				epochSeconds: data.epochSeconds,
 				// updatedAt: toReadableDate(data.updatedAt),
 			};
 		});
