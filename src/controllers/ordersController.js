@@ -192,7 +192,7 @@ export const getAllOrders = async (req, res) => {
 		let query = db
 			.collection("orders")
 			.where("epochSeconds", ">", after)
-			.orderBy("epochMilli", "asc");
+			.orderBy("epochSeconds", "asc");
 
 		if (limit > 0) {
 			query = query.limit(limit);
@@ -212,7 +212,7 @@ export const getAllOrders = async (req, res) => {
 				takeProfitPrice: data.takeProfitPrice,
 				orderSize: data.orderSize,
 				createdAt: data.createdAt,
-				epochMilli: data.epochMilli
+				epochSeconds: data.epochSeconds
 				// updatedAt: toReadableDate(data.updatedAt),
 			};
 		});
