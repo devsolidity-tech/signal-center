@@ -9,6 +9,11 @@ app.use(express.json());
 
 app.use("/", rootRouter);
 
+app.get("/epoch", (req, res) => {
+	const currentEpoch = Math.floor(Date.now() / 1000);
+	res.json({ epoch: currentEpoch });
+});
+
 app.listen(PORT, () => {
 	console.log(`Server listening on http://localhost:${PORT}`);
 });

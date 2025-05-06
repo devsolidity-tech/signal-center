@@ -192,7 +192,7 @@ export const getAllOrders = async (req, res) => {
 		let query = db
 			.collection("orders")
 			.where("epochSeconds", ">", after)
-			.orderBy("epochSeconds", "asc");
+			.orderBy("epochMilli", "asc");
 
 		if (limit > 0) {
 			query = query.limit(limit);
