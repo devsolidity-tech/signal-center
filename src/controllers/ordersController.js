@@ -191,8 +191,8 @@ export const getAllOrders = async (req, res) => {
 		const limit = parseInt(req.query.limit, 10) || null;
 		let query = db
 			.collection("orders")
-			.where("epochMilli", ">", after)
-			.orderBy("epochMilli", "asc");
+			.where("epochSeconds", ">", after)
+			.orderBy("epochSeconds", "asc");
 
 		if (limit > 0) {
 			query = query.limit(limit);
