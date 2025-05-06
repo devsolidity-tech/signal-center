@@ -20,3 +20,17 @@ export function toReadableDate(timestamp) {
 	// e.g. "2025-05-05 18:02:55"
 	return date.toLocaleString("en-CA", options).replace(",", "");
 }
+
+export function convertEpochMilliToGmt7(epochMilli) {
+	const date = new Date(epochMilli);
+	const gmt7Offset = 7 * 60; // GMT+7 in minutes
+	const localTime = new Date(date.getTime() + gmt7Offset * 60 * 1000);
+	return localTime.toISOString().replace("T", " ").substring(0, 19);
+}
+
+export function convertEpochToGmt7(epochSeconds) {
+	const date = new Date(epochSeconds * 1000); // convert to ms
+	const gmt7Offset = 7 * 60; // minutes
+	const localTime = new Date(date.getTime() + gmt7Offset * 60 * 1000);
+	return localTime.toISOString().replace("T", " ").substring(0, 19);
+}

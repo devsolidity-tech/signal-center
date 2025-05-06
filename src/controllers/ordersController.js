@@ -1,6 +1,6 @@
 import OrderDTO from "../dto/OrderDTO.js";
 import { symbols, openOrderType, updateOrderType } from "../utils/constant.js";
-import { toReadableDate } from "../utils/dateUtils.js";
+import { toReadableDate, convertEpochMilliToGmt7, convertEpochToGmt7 } from "../utils/dateUtils.js";
 import { db, FieldValue, Timestamp } from "../database/firebase.js";
 import { generateEpochId } from "../utils/timestampId.js";
 import admin from "firebase-admin";
@@ -19,11 +19,8 @@ export const createOrder = async (req, res) => {
 
 		orderDto.orderId = generateEpochId();
 
-		const jakartaString = new Date().toLocaleString("en-US", {
-			timeZone: "Asia/Jakarta",
-		});
-		const jakartaDate = new Date(jakartaString);
-		const createdAtTs = Timestamp.fromDate(jakartaDate);
+		const epochSeconds = Math.floor(Date.now() / 1000);
+		const createdAt = convertEpochToGmt7(epochSeconds);
 
 		const docRef = await db.collection("orders").add({
 			orderId: orderDto.orderId,
@@ -33,7 +30,8 @@ export const createOrder = async (req, res) => {
 			stopLossPrice: orderDto.stopLossPrice,
 			takeProfitPrice: orderDto.takeProfitPrice,
 			orderSize: orderDto.orderSize,
-			createdAt: createdAtTs,
+			epochSeconds,
+			createdAt,
 		});
 
 		const newOrderId = docRef.id;
@@ -47,8 +45,9 @@ export const createOrder = async (req, res) => {
 			stopLossPrice: orderDto.stopLossPrice,
 			takeProfitPrice: orderDto.takeProfitPrice,
 			orderSize: orderDto.orderSize,
-			createdAt: createdAtTs,
 			transactionType: "ADD",
+			epochSeconds,
+			createdAt,
 		});
 
 		res.status(201).json({
@@ -184,11 +183,21 @@ export const getOrderByOrderId = async (req, res) => {
 
 export const getAllOrders = async (req, res) => {
 	try {
+		const after = parseInt(req.query.after, 10);
+		if (isNaN(after)) {
+			return res.status(400).json({ error: "Invalid 'after' timestamp" });
+		}
+
 		const limit = parseInt(req.query.limit, 10) || null;
-		let query = db.collection("orders").orderBy("createdAt", "desc");
+		let query = db
+			.collection("orders")
+			.where("epochMilli", ">", after)
+			.orderBy("epochMilli", "asc");
+
 		if (limit > 0) {
 			query = query.limit(limit);
 		}
+
 		const snapshot = await query.get();
 		const orders = snapshot.docs.map((doc) => {
 			const data = doc.data();
@@ -202,12 +211,14 @@ export const getAllOrders = async (req, res) => {
 				stopLossPrice: data.stopLossPrice,
 				takeProfitPrice: data.takeProfitPrice,
 				orderSize: data.orderSize,
-				createdAt: toReadableDate(data.createdAt),
-				updatedAt: toReadableDate(data.updatedAt),
+				createdAt: data.createdAt,
+				epochMilli: data.epochMilli
+				// updatedAt: toReadableDate(data.updatedAt),
 			};
 		});
 		res.json({ success: true, data: orders });
 	} catch (error) {
+		console.log(error);
 		res.status(500).json({ success: false, message: error.message });
 	}
 };
@@ -226,6 +237,8 @@ export const getOrderByLatestTimestamp = async (req, res) => {
 			}
 
 			const ts = admin.firestore.Timestamp.fromMillis(ms);
+
+			console.log(latestTimestamp);
 
 			query = query
 				.where("createdAt", ">", ts)
